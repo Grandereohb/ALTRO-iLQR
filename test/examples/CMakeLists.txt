@@ -17,3 +17,13 @@ target_link_libraries(example_unicycle_test
   example_problems
 )
 gtest_discover_tests(example_unicycle_test)
+
+add_executable(example_truck_test
+example_truck_test.cpp
+)
+target_link_libraries(example_truck_test
+  PRIVATE
+  gtest_main
+  example_problems
+)
+gtest_discover_tests(example_truck_test)

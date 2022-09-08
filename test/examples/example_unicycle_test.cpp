@@ -89,7 +89,7 @@ TEST_F(UnicycleExampleTest, SolveConstrained) {
 }
 
 TEST_F(UnicycleExampleTest, SolveParallel) {
-  N = 10;
+  N = 40;
   altro::augmented_lagrangian::AugmentedLagrangianiLQR<NStates, NControls> solver_al = MakeALSolver();
   // solver_al.SetPenalty(10.0);
   solver_al.GetOptions().initial_penalty = 10.0;

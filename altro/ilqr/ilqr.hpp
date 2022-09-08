@@ -8,6 +8,7 @@
 #include <iostream>
 #include <map>
 #include <thread>
+#include "matplotlibcpp.h"
 
 #include "altro/common/solver_stats.hpp"
 #include "altro/common/state_control_sized.hpp"
@@ -18,6 +19,8 @@
 #include "altro/ilqr/knot_point_function_type.hpp"
 #include "altro/problem/problem.hpp"
 #include "altro/utils/assert.hpp"
+
+namespace plt = matplotlibcpp;
 
 namespace altro {
 namespace ilqr {
@@ -469,6 +472,7 @@ class iLQR {
     Stopwatch sw = stats_.GetTimer()->Start("rollout");
 
     Zbar_->State(0) = *initial_state_;
+    // std::cout << N_ << std::endl;
     for (int k = 0; k < N_; ++k) {
       MatrixNxMd<m, n>& K = GetKnotPointFunction(k).GetFeedbackGain();
       VectorNd<m>& d = GetKnotPointFunction(k).GetFeedforwardGain();
@@ -476,7 +480,11 @@ class iLQR {
       // TODO(bjackson): Make this a function of the dynamics
       VectorNd<n> dx = Zbar_->State(k) - Z_->State(k);
       Zbar_->Control(k) = Z_->Control(k) + K * dx + d * alpha;
-
+      // if(k % 5 == 0)
+      //   std::cout << "u = " << Zbar_->Control(k) << ", x = " << Zbar_->State(k)(0)
+      //             << ", y = " << Zbar_->State(k)(1) << ", yaw = " << Zbar_->State(k)(2)
+      //             << ", hitch = " << Zbar_->State(k)(3) << ", time = " << Z_->GetTime(k)
+      //             << std::endl;
       // Simulate forward with feedback
       GetKnotPointFunction(k).Dynamics(Zbar_->State(k), Zbar_->Control(k), Zbar_->GetTime(k),
                                        Zbar_->GetStep(k), Zbar_->State(k + 1));
@@ -531,7 +539,8 @@ class iLQR {
         } else {
           z = -1.0;
         }
-
+        // drawPlot();
+        // std::cout << "dJ = " << J0 - J << ", expected dJ = " << expected << std::endl;
         if (opts.line_search_lower_bound <= z && z <= opts.line_search_upper_bound && J < J0) {
           success = true;
           // stats_.improvement_ratio.emplace_back(z);
@@ -543,7 +552,7 @@ class iLQR {
       }
       alpha /= opts.line_search_decrease_factor;
     }
-
+    // std::cout << "cost J = " << J << std::endl;
     if (success) {
       (*Z_) = (*Zbar_);
     } else {
@@ -598,7 +607,7 @@ class iLQR {
     Stopwatch sw = stats_.GetTimer()->Start("convergence_check");
     SolverOptions& opts = GetOptions();
 
-    bool cost_decrease = stats_.cost_decrease.back() < opts.cost_tolerance;
+    bool cost_decrease = stats_.cost_decrease.back() < opts.cost_tolerance * stats_.cost.back();
     bool gradient = stats_.gradient.back() < opts.gradient_tolerance;
     bool is_done = false;
 
@@ -783,6 +792,37 @@ class iLQR {
     drho_ = std::min(drho_ / opts.bp_reg_increase_factor, 1 / opts.bp_reg_increase_factor);
     rho_ = std::max(rho_ * drho_, opts.bp_reg_min);
     rho_ = std::min(rho_, opts.bp_reg_max);
+  }
+
+  void drawPlot() {
+    // Straight Road With Obstacle
+    std::vector<double> xf = {50, 3.75};
+
+    std::vector<std::vector<double>> xref(2, std::vector<double>(51, 3.75)),
+        xorigin(2, std::vector<double>(51, 0)), line1(2, std::vector<double>(51, 3.75 / 2.0)),
+        line2(2, std::vector<double>(51, -3.75 / 2.0)), line3(2, std::vector<double>(51, 3.75 *1.5));
+    int N = NumSegments();
+    std::vector<double> trajx(N+1), trajy(N+1);
+    for (int i = 0; i <= N; ++i) {
+      xref[0][i] = xf[0] / N * i;
+      xorigin[0][i] = xf[0] / N* i;
+      line1[0][i] = xf[0] / N * i;
+      line2[0][i] = xf[0] / N * i;
+      line3[0][i] = xf[0] / N * i;
+      trajx[i] = Z_->State(i)[0];
+      trajy[i] = Z_->State(i)[1];
+    }
+
+    plt::xlim(0, 60);
+    plt::ylim(-12, 12);
+    plt::plot(xref[0], xref[1], "b--");
+    plt::plot(xorigin[0], xorigin[1], "b--");
+    plt::plot(line1[0], line1[1], "k--");
+    plt::plot(line2[0], line2[1], "k-");
+    plt::plot(line3[0], line3[1], "k-");
+    plt::plot(trajx, trajy, "g-");
+    plt::axis("scaled");
+    plt::show();
   }
 
   int N_;  // number of segments

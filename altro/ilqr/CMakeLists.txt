@@ -13,10 +13,13 @@ target_link_libraries(ilqr
   fmt::fmt
   Eigen3::Eigen
   threadpool
+  Python3::Python
+  Python3::NumPy
 
   PRIVATE
   common
   problem
   utils
 )
+target_include_directories(ilqr PRIVATE ${Python2_INCLUDE_DIRS} ${Python2_NumPy_INCLUDE_DIRS})
 export_library(ilqr AltroCppTargets)

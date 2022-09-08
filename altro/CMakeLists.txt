@@ -21,6 +21,8 @@ target_link_libraries(altro
   INTERFACE
   fmt::fmt
   Eigen3::Eigen
+  Python3::Python
+  Python3::NumPy
 
   augmented_lagrangian
   common
@@ -30,5 +32,6 @@ target_link_libraries(altro
   utils
   threadpool
 )
+target_include_directories(altro PRIVATE ${Python2_INCLUDE_DIRS} ${Python2_NumPy_INCLUDE_DIRS})
 
 export_library(altro AltroCppTargets)

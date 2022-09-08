@@ -3,6 +3,8 @@ add_library(example_problems
   triple_integrator.cpp
   unicycle.hpp
   unicycle.cpp
+  truck.hpp
+  truck.cpp
 )
 target_link_libraries(example_problems
   PUBLIC

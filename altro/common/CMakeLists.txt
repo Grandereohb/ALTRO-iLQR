@@ -23,10 +23,13 @@ target_link_libraries(common
   PUBLIC
   Eigen3::Eigen # needs to be public since the interface uses Eigen
   fmt::fmt      # needs to be public since solver_logger uses it in the interface
+  Python3::Python
+  Python3::NumPy
 
   PRIVATE
   utils
 )
+target_include_directories(common PRIVATE ${Python2_INCLUDE_DIRS} ${Python2_NumPy_INCLUDE_DIRS})
 target_compile_definitions(common 
   PRIVATE
   LOGDIR="${LOGDIR}"

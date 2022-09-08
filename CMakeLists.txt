@@ -3,7 +3,7 @@ project(AltroCpp VERSION 0.3.4)
 
 set(CMAKE_CXX_STANDARD 14)
 
-add_compile_options(-Wall -Wextra -pedantic -Werror)
+add_compile_options(-Wall -Wextra -pedantic -Werror -O2)
 
 # Defines GNU standard installation directories
 include(GNUInstallDirs)
@@ -56,6 +56,7 @@ set(fmt_REQUIRED_VERSION 6.1.2)
 set(fmt_REQUIRED_DEBIAN_VERSION ${fmt_REQUIRED_VERSION})
 find_package(fmt ${fmt_REQUIRED_VERSION} REQUIRED)
 
+find_package(Python3 COMPONENTS Development NumPy)
 ################################################################################
 ########################## ENABLE GOOGLE TEST ##################################
 ################################################################################

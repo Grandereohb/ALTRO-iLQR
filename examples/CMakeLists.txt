@@ -15,6 +15,8 @@ add_library(dynamics_examples
   unicycle.cpp
   triple_integrator.cpp
   triple_integrator.hpp
+  truck.hpp
+  truck.cpp
 )
 target_link_libraries(dynamics_examples
   PUBLIC

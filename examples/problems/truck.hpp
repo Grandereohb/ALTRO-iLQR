@@ -16,21 +16,21 @@
 #include "examples/basic_constraints.hpp"
 #include "examples/obstacle_constraints.hpp"
 #include "examples/quadratic_cost.hpp"
-#include "examples/unicycle.hpp"
+#include "examples/truck.hpp"
 
 namespace altro {
 namespace problems {
 
-class UnicycleProblem {
+class TruckProblem {
  public:
-  static constexpr int NStates = 3;
+  static constexpr int NStates = 4;
   static constexpr int NControls = 2;
 
-  UnicycleProblem();
+  TruckProblem();
 
-  enum Scenario { kTurn90, kThreeObstacles };
+  enum Scenario { kTurn90, kThreeObstacles, StraightRoadWithObs, Uturn, LaneChange, ForwardObs, Largecurve };
 
-	using ModelType = altro::problem::DiscretizedModel<altro::examples::Unicycle>;
+	using ModelType = altro::problem::DiscretizedModel<altro::examples::Truck>;
 	using CostFunType = altro::examples::QuadraticCost;
 
   // Problem Data
@@ -38,21 +38,23 @@ class UnicycleProblem {
   const int n = NStates;
   const int m = NControls;
 
-  int N = 40;
-  ModelType model = ModelType(altro::examples::Unicycle());
+  int N = 50;
+  ModelType model = ModelType(altro::examples::Truck());
 
-  Eigen::Matrix3d Q = Eigen::Vector3d::Constant(NStates, 1e-2).asDiagonal();
-  Eigen::Matrix2d R = Eigen::Vector2d::Constant(NControls, 1e-2).asDiagonal();
-  Eigen::Matrix3d Qf = Eigen::Vector3d::Constant(NStates, 100).asDiagonal();
-  Eigen::Vector3d xf = Eigen::Vector3d(1.5, 1.5, M_PI / 2);
-  Eigen::Vector3d x0 = Eigen::Vector3d(0, 0, 0);
-  Eigen::Vector2d u0 = Eigen::Vector2d::Constant(NControls, 0.1);
-  Eigen::Vector2d uref = Eigen::Vector2d::Zero();
+  Eigen::MatrixXd Q = Eigen::VectorXd::Constant(NStates, 1e-2).asDiagonal();
+  Eigen::MatrixXd R = Eigen::VectorXd::Constant(NControls, 1e-2).asDiagonal();
+  Eigen::MatrixXd Qf = Eigen::VectorXd::Constant(NStates, 100).asDiagonal();
+  Eigen::Vector4d xf = Eigen::Vector4d(0, 0, 0, 0);
+  Eigen::Vector4d x0 = Eigen::Vector4d(0, 0, 0, 0);
+  Eigen::VectorXd u0 = Eigen::VectorXd::Constant(NControls, 0.0);
+  Eigen::VectorXd uref = Eigen::VectorXd::Constant(NControls, 0.0);
   std::shared_ptr<examples::QuadraticCost> qcost;
   std::shared_ptr<examples::QuadraticCost> qterm;
 
-  double v_bnd = 1.5;  // linear velocity bound
+  double v_bnd = 11;  // linear velocity bound = 22 m/s
   double w_bnd = 1.5;  // angular velocity bound
+  // double steer_bnd = 0.174532925;  // steer angle bound = 10 deg
+  double steer_bnd = 0.523598776;  // steer angle bound = 30 deg
   Eigen::VectorXd cx;  // x-coordinates of obstacles
   Eigen::VectorXd cy;  // y-coordinates of obstacles
   Eigen::VectorXd cr;  // radii of obstacles
@@ -60,7 +62,8 @@ class UnicycleProblem {
   std::vector<double> ub;
   altro::examples::CircleConstraint obstacles;
 
-  altro::problem::Problem MakeProblem(const bool add_constraints = true);
+//   altro::problem::Problem MakeProblem(const bool add_constraints = true, Eigen::VectorXd x_init  = Eigen::VectorXd(NStates, 0));
+  altro::problem::Problem MakeProblem(const bool add_constraints = true, Eigen::Vector4d x_init  = Eigen::Vector4d(0, 0, 0, 0));
 
   template <int n_size = NStates, int m_size = NControls>
   altro::Trajectory<n_size, m_size> InitialTrajectory();
@@ -69,19 +72,20 @@ class UnicycleProblem {
   altro::ilqr::iLQR<n_size, m_size> MakeSolver(const bool alcost = false);
 
   template <int n_size = NStates, int m_size = NControls>
-  altro::augmented_lagrangian::AugmentedLagrangianiLQR<n_size, m_size> MakeALSolver();
+//   altro::augmented_lagrangian::AugmentedLagrangianiLQR<n_size, m_size> MakeALSolver(Eigen::VectorXd x_init = Eigen::VectorXd(NStates, 0));
+  altro::augmented_lagrangian::AugmentedLagrangianiLQR<n_size, m_size> MakeALSolver(Eigen::Vector4d x_init = Eigen::Vector4d(0, 0, 0, 0));
 
   void SetScenario(Scenario scenario) { scenario_ = scenario; }
 
   float GetTimeStep() const { return tf / N; }
 
  private:
-  bool scenario_ = kTurn90;
+  Scenario scenario_ = StraightRoadWithObs;
   float tf = 3.0;
 };
 
 template <int n_size, int m_size>
-altro::Trajectory<n_size, m_size> UnicycleProblem::InitialTrajectory() {
+altro::Trajectory<n_size, m_size> TruckProblem::InitialTrajectory() {
   altro::Trajectory<n_size, m_size> Z(n, m, N);
   for (int k = 0; k < N; ++k) {
     Z.Control(k) = u0;
@@ -92,7 +96,7 @@ altro::Trajectory<n_size, m_size> UnicycleProblem::InitialTrajectory() {
 }
 
 template <int n_size, int m_size>
-altro::ilqr::iLQR<n_size, m_size> UnicycleProblem::MakeSolver(const bool alcost) {
+altro::ilqr::iLQR<n_size, m_size> TruckProblem::MakeSolver(const bool alcost) {
   altro::problem::Problem prob = MakeProblem();
   if (alcost) {
     prob = altro::augmented_lagrangian::BuildAugLagProblem<n_size, m_size>(prob);
@@ -109,8 +113,8 @@ altro::ilqr::iLQR<n_size, m_size> UnicycleProblem::MakeSolver(const bool alcost)
 
 template <int n_size, int m_size>
 altro::augmented_lagrangian::AugmentedLagrangianiLQR<n_size, m_size>
-UnicycleProblem::MakeALSolver() {
-  altro::problem::Problem prob = MakeProblem(true);
+TruckProblem::MakeALSolver(Eigen::Vector4d x_init) {
+  altro::problem::Problem prob = MakeProblem(true, x_init);
   altro::augmented_lagrangian::AugmentedLagrangianiLQR<n_size, m_size> solver_al(prob);
   solver_al.SetTrajectory(
       std::make_shared<altro::Trajectory<NStates, NControls>>(InitialTrajectory()));

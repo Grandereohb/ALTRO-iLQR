@@ -214,6 +214,8 @@ class AugmentedLagrangianiLQR {
 
   void ResetDualVariables();
 
+  void drawPlot();
+
  private:
   Stopwatch CreateTimer(const std::string& name) { return GetStats().GetTimer()->Start(name); }
 
@@ -320,7 +322,7 @@ void AugmentedLagrangianiLQR<n, m>::Solve() {
     if (!is_ilqr_logging) {
       GetStats().PrintLast();
     }
-
+    // drawPlot();
     if (IsDone()) {
       break;
     }
@@ -439,6 +441,43 @@ void AugmentedLagrangianiLQR<n, m>::ResetDualVariables() {
     alcost->ResetDualVariables();
   }
 }
+
+template <int n, int m>
+void AugmentedLagrangianiLQR<n, m>::drawPlot() {
+    // Straight Road With Obstacle
+    std::vector<double> xf = {50, 3.75};
+    // double obsr = 6;
+    std::vector<double> obsx = {0, 20};
+    std::vector<double> obsy = {3.75, 3.75};
+
+    std::vector<std::vector<double>> xref(2, std::vector<double>(51, 3.75)),
+        xorigin(2, std::vector<double>(51, 0)), line1(2, std::vector<double>(51, 3.75 / 2.0)),
+        line2(2, std::vector<double>(51, -3.75 / 2.0)), line3(2, std::vector<double>(51, 3.75 *1.5));
+    int N = NumSegments();
+    std::vector<double> trajx(N+1), trajy(N+1);
+    for (int i = 0; i <= N; ++i) {
+      xref[0][i] = xf[0] / N * i;
+      xorigin[0][i] = xf[0] / N* i;
+      line1[0][i] = xf[0] / N * i;
+      line2[0][i] = xf[0] / N * i;
+      line3[0][i] = xf[0] / N * i;
+      trajx[i] = GetiLQRSolver().GetTrajectory()->State(i)[0];
+      trajy[i] = GetiLQRSolver().GetTrajectory()->State(i)[1];
+    }
+
+    plt::xlim(0, 60);
+    plt::ylim(-12, 12);
+    plt::plot(xref[0], xref[1], "b--");
+    plt::plot(xorigin[0], xorigin[1], "b--");
+    plt::plot(line1[0], line1[1], "k--");
+    plt::plot(line2[0], line2[1], "k-");
+    plt::plot(line3[0], line3[1], "k-");
+    // plt::plot({obsx[0]}, {obsy[0]}, {{"c","red"}, {"marker","s"}, {"markersize","40"}});
+    // plt::plot({obsx[1]}, {obsy[1]}, {{"c","red"}, {"marker","o"}, {"markersize","40"}});
+    plt::plot(trajx, trajy, "g-");
+    plt::axis("scaled");
+    plt::show();
+  }
 
 }  // namespace augmented_lagrangian
 }  // namespace altro
